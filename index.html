@@ -1,0 +1,1074 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AP Study Planner — Stats & Physics 1</title>
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=DM+Mono:wght@400;500&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #F5F2EC; --surface: #FFFDF8; --surface2: #F0EDE5;
+    --ink: #1A1916; --ink2: #5A5750; --ink3: #9A978F; --rule: #DDD9CF;
+    --green: #1D9E75; --green-light: #E1F5EE;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--ink); min-height: 100vh; }
+
+  /* TOP NAV */
+  .top-nav {
+    background: var(--surface); border-bottom: 1px solid var(--rule);
+    padding: 0 28px; display: flex; align-items: stretch;
+    position: sticky; top: 0; z-index: 200; height: 56px; gap: 0;
+  }
+  .app-brand {
+    font-family: 'Instrument Serif', serif; font-size: 18px;
+    display: flex; align-items: center; padding-right: 20px;
+    border-right: 1px solid var(--rule); margin-right: 4px; white-space: nowrap; flex-shrink: 0;
+  }
+  .app-brand em { font-style: italic; color: #D85A30; }
+  .subject-tabs { display: flex; align-items: stretch; }
+  .subject-tab {
+    display: flex; align-items: center; gap: 9px;
+    padding: 0 22px; cursor: pointer;
+    border-bottom: 2.5px solid transparent;
+    font-size: 13px; font-weight: 500; color: var(--ink3);
+    transition: all .15s; white-space: nowrap; user-select: none;
+  }
+  .subject-tab:hover { color: var(--ink); background: var(--surface2); }
+  .subject-tab.active { color: var(--ink); }
+  .subject-tab.stats-tab.active  { border-bottom-color: #7F77DD; }
+  .subject-tab.physics-tab.active { border-bottom-color: #1D9E75; }
+  .tab-pip { width: 8px; height: 8px; border-radius: 50%; }
+  .nav-right {
+    display: flex; align-items: center; gap: 12px; margin-left: auto;
+  }
+  .exam-pill {
+    font-family: 'DM Mono', monospace; font-size: 10px; font-weight: 500;
+    color: var(--ink3); background: var(--surface2); border: 1px solid var(--rule);
+    padding: 3px 9px; border-radius: 20px; letter-spacing: .4px; white-space: nowrap;
+  }
+  .progress-bar-outer { width: 100px; height: 3px; background: var(--rule); border-radius: 2px; overflow: hidden; }
+  .progress-bar-inner { height: 100%; background: var(--green); border-radius: 2px; transition: width .4s; }
+  .progress-label { font-size: 11px; color: var(--ink3); font-family: 'DM Mono', monospace; }
+
+  /* SUBJECT PANELS */
+  .subject-panel { display: none; }
+  .subject-panel.active { display: grid; grid-template-columns: 240px 1fr; min-height: calc(100vh - 56px); }
+
+  /* SIDEBAR */
+  .sidebar {
+    background: var(--surface); border-right: 1px solid var(--rule);
+    padding: 20px 0; position: sticky; top: 56px;
+    height: calc(100vh - 56px); overflow-y: auto;
+  }
+  .sidebar-week-label {
+    font-size: 10px; font-weight: 600; letter-spacing: .8px; text-transform: uppercase;
+    color: var(--ink3); padding: 8px 16px 4px; font-family: 'DM Mono', monospace;
+  }
+  .sidebar-session {
+    display: flex; align-items: center; gap: 10px;
+    padding: 9px 16px; cursor: pointer; border-radius: 6px;
+    margin: 1px 8px; transition: background .15s; font-size: 13px;
+    color: var(--ink2); text-decoration: none; position: relative;
+  }
+  .sidebar-session:hover { background: var(--surface2); color: var(--ink); }
+  .sidebar-session.active { background: var(--surface2); color: var(--ink); font-weight: 500; }
+  .sidebar-session.active::before {
+    content: ''; position: absolute; left: 0; top: 4px; bottom: 4px;
+    width: 3px; border-radius: 0 2px 2px 0;
+  }
+  .stats-panel  .sidebar-session.active::before { background: #7F77DD; }
+  .physics-panel .sidebar-session.active::before { background: #1D9E75; }
+  .session-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+  .session-check {
+    width: 16px; height: 16px; border-radius: 50%; border: 1.5px solid var(--rule);
+    margin-left: auto; display: flex; align-items: center; justify-content: center;
+    font-size: 9px; transition: all .2s; flex-shrink: 0; color: transparent;
+  }
+  .session-check.done { background: var(--green); border-color: var(--green); color: white; }
+
+  /* MAIN */
+  .main { padding: 32px 40px; max-width: 820px; }
+  .session-header { margin-bottom: 28px; }
+  .week-eyebrow { font-family: 'DM Mono', monospace; font-size: 11px; letter-spacing: .8px; text-transform: uppercase; margin-bottom: 8px; }
+  .session-title { font-family: 'Instrument Serif', serif; font-size: 32px; letter-spacing: -.5px; line-height: 1.2; margin-bottom: 8px; }
+  .session-meta { display: flex; gap: 16px; align-items: center; font-size: 13px; color: var(--ink3); }
+  .skill-chips { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 28px; }
+  .skill-chip { font-family: 'DM Mono', monospace; font-size: 11px; padding: 3px 10px; border-radius: 20px; font-weight: 500; }
+
+  /* CARDS */
+  .section-card { background: var(--surface); border: 1px solid var(--rule); border-radius: 12px; margin-bottom: 16px; overflow: hidden; }
+  .section-header { display: flex; align-items: center; gap: 12px; padding: 14px 20px; cursor: pointer; border-bottom: 1px solid var(--rule); user-select: none; }
+  .section-header:hover { background: var(--surface2); }
+  .section-icon { width: 28px; height: 28px; border-radius: 6px; display: flex; align-items: center; justify-content: center; font-size: 14px; flex-shrink: 0; }
+  .section-title-text { font-size: 14px; font-weight: 500; }
+  .section-subtitle { font-size: 12px; color: var(--ink3); margin-top: 1px; }
+  .section-chevron { margin-left: auto; font-size: 12px; color: var(--ink3); transition: transform .2s; }
+  .section-chevron.open { transform: rotate(90deg); }
+  .section-body { padding: 20px; display: none; }
+  .section-body.open { display: block; }
+
+  /* RESOURCES */
+  .resource-list { list-style: none; }
+  .resource-item { display: flex; align-items: flex-start; gap: 12px; padding: 10px 0; border-bottom: 1px solid var(--rule); }
+  .resource-item:last-child { border-bottom: none; }
+  .resource-type { font-family: 'DM Mono', monospace; font-size: 10px; font-weight: 500; padding: 2px 7px; border-radius: 4px; background: var(--surface2); color: var(--ink3); flex-shrink: 0; margin-top: 2px; }
+  .resource-text { font-size: 13px; line-height: 1.5; }
+  .resource-text a { color: #4A3FA0; text-decoration: underline; text-underline-offset: 2px; }
+  .resource-text a:hover { color: #D85A30; }
+  .resource-note { font-size: 12px; color: var(--ink3); margin-top: 2px; }
+
+  /* PROBLEMS */
+  .problem { border: 1px solid var(--rule); border-radius: 8px; margin-bottom: 12px; overflow: hidden; }
+  .problem-q { padding: 12px 16px; font-size: 14px; line-height: 1.6; cursor: pointer; display: flex; gap: 12px; align-items: flex-start; }
+  .problem-q:hover { background: var(--surface2); }
+  .problem-number { font-family: 'DM Mono', monospace; font-size: 11px; font-weight: 500; color: white; background: var(--ink3); width: 22px; height: 22px; border-radius: 4px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; margin-top: 1px; }
+  .problem-type-badge { font-family: 'DM Mono', monospace; font-size: 10px; padding: 2px 7px; border-radius: 4px; flex-shrink: 0; margin-top: 3px; }
+  .mc-badge { background: #E6F1FB; color: #185FA5; }
+  .frq-badge { background: #FAECE7; color: #993C1D; }
+  .mc-choices { padding: 0 16px 14px 50px; display: none; }
+  .mc-choices.open { display: block; }
+  .mc-choice { display: flex; align-items: flex-start; gap: 8px; padding: 6px 10px; border-radius: 6px; font-size: 13px; cursor: pointer; margin-bottom: 4px; border: 1px solid transparent; transition: all .15s; }
+  .mc-choice:hover { background: var(--surface2); border-color: var(--rule); }
+  .mc-choice.correct { background: var(--green-light); border-color: var(--green); }
+  .mc-choice.incorrect { background: #FAECE7; border-color: #D85A30; }
+  .mc-letter { font-family: 'DM Mono', monospace; font-size: 11px; font-weight: 500; width: 18px; flex-shrink: 0; margin-top: 1px; }
+  .answer-section { border-top: 1px solid var(--rule); padding: 14px 16px; background: var(--surface2); display: none; font-size: 13px; line-height: 1.7; }
+  .answer-section.open { display: block; }
+  .answer-label { font-family: 'DM Mono', monospace; font-size: 10px; font-weight: 500; text-transform: uppercase; letter-spacing: .5px; color: var(--green); margin-bottom: 6px; }
+  .show-answer-btn { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 500; color: var(--ink3); background: none; border: 1px solid var(--rule); padding: 5px 12px; border-radius: 6px; cursor: pointer; margin: 8px 0 0 50px; font-family: 'DM Sans', sans-serif; transition: all .15s; }
+  .show-answer-btn:hover { background: var(--surface2); color: var(--ink); }
+  .frq-body { padding: 12px 16px 14px 50px; display: none; }
+  .frq-body.open { display: block; }
+  .frq-body ol { padding-left: 18px; font-size: 13px; line-height: 1.8; }
+  .tip-box { background: #EEEDFE; border-left: 3px solid #7F77DD; border-radius: 0 8px 8px 0; padding: 12px 16px; font-size: 13px; color: #3C3489; line-height: 1.6; margin-top: 16px; }
+  .physics-panel .tip-box { background: #E1F5EE; border-left-color: #1D9E75; color: #085041; }
+  .complete-btn { display: inline-flex; align-items: center; gap: 8px; font-family: 'DM Sans', sans-serif; font-size: 13px; font-weight: 500; padding: 10px 20px; border-radius: 8px; border: 1.5px solid var(--green); background: var(--green-light); color: var(--green); cursor: pointer; transition: all .2s; margin-top: 24px; }
+  .complete-btn:hover, .complete-btn.done { background: var(--green); color: white; }
+
+  @media (max-width: 700px) {
+    .subject-panel.active { grid-template-columns: 1fr; }
+    .sidebar { display: none; }
+    .main { padding: 20px; }
+  }
+</style>
+</head>
+<body>
+
+<!-- TOP NAV -->
+<nav class="top-nav">
+  <div class="app-brand">AP <em>&nbsp;Study</em></div>
+  <div class="subject-tabs">
+    <div class="subject-tab stats-tab active" onclick="switchSubject('stats')">
+      <span class="tab-pip" style="background:#7F77DD"></span>AP Statistics
+    </div>
+    <div class="subject-tab physics-tab" onclick="switchSubject('physics')">
+      <span class="tab-pip" style="background:#1D9E75"></span>AP Physics 1
+    </div>
+  </div>
+  <div class="nav-right">
+    <span class="progress-label" id="progress-text">0 of 9 done</span>
+    <div class="progress-bar-outer"><div class="progress-bar-inner" id="progress-bar" style="width:0%"></div></div>
+    <span class="exam-pill" id="exam-pill">EXAM MAY 7</span>
+  </div>
+</nav>
+
+<!-- STATS PANEL -->
+<div class="subject-panel stats-panel active" id="panel-stats">
+  <nav class="sidebar" id="sidebar-stats"></nav>
+  <main class="main" id="main-stats"></main>
+</div>
+
+<!-- PHYSICS PANEL -->
+<div class="subject-panel physics-panel" id="panel-physics">
+  <nav class="sidebar" id="sidebar-physics"></nav>
+  <main class="main" id="main-physics"></main>
+</div>
+
+<script>
+// ─── SUBJECT SWITCHER ──────────────────────────────────────────────────────
+let activeSubject = 'stats';
+const examDates = { stats: 'EXAM MAY 7', physics: 'EXAM MAY 6' };
+
+function switchSubject(subj) {
+  activeSubject = subj;
+  document.querySelectorAll('.subject-tab').forEach(t => t.classList.remove('active'));
+  document.querySelector('.' + subj + '-tab').classList.add('active');
+  document.querySelectorAll('.subject-panel').forEach(p => p.classList.remove('active'));
+  document.getElementById('panel-' + subj).classList.add('active');
+  document.getElementById('exam-pill').textContent = examDates[subj];
+  updateProgressBar(subj);
+}
+
+// ─── SHARED PROGRESS ──────────────────────────────────────────────────────
+let completedStats   = JSON.parse(localStorage.getItem('ap_stats_done')   || '[]');
+let completedPhysics = JSON.parse(localStorage.getItem('ap_physics_done') || '[]');
+
+function getCompleted(subj) { return subj === 'stats' ? completedStats : completedPhysics; }
+
+function saveCompleted(subj, arr) {
+  if (subj === 'stats') { completedStats = arr; localStorage.setItem('ap_stats_done', JSON.stringify(arr)); }
+  else { completedPhysics = arr; localStorage.setItem('ap_physics_done', JSON.stringify(arr)); }
+}
+
+function updateProgressBar(subj) {
+  const done = getCompleted(subj);
+  const total = subj === 'stats' ? statsSessions.length : physicsSessions.length;
+  const pct = Math.round(done.length / total * 100);
+  document.getElementById('progress-bar').style.width = pct + '%';
+  document.getElementById('progress-text').textContent = done.length + ' of ' + total + ' done';
+}
+
+// ─── SHARED RENDER HELPERS ────────────────────────────────────────────────
+function toggleSection(id) {
+  const body = document.getElementById(id);
+  const chev = document.getElementById('chev-' + id);
+  body.classList.toggle('open');
+  if (chev) chev.classList.toggle('open');
+}
+function toggleChoices(probId) { document.getElementById('choices-' + probId)?.classList.toggle('open'); }
+function toggleFRQ(probId) { document.getElementById('frq-' + probId)?.classList.toggle('open'); }
+function toggleAnswer(probId) {
+  const el = document.getElementById('ans-' + probId);
+  el.classList.toggle('open');
+  const btn = el.previousElementSibling;
+  btn.textContent = el.classList.contains('open') ? 'Hide answer' : 'Show sample answer';
+}
+function checkAnswer(el) {
+  const probId = el.dataset.prob;
+  const correct = el.dataset.correct;
+  document.querySelectorAll(`[data-prob="${probId}"]`).forEach(c => { c.classList.remove('correct','incorrect'); c.onclick = null; });
+  el.classList.add(el.dataset.letter === correct ? 'correct' : 'incorrect');
+  document.querySelectorAll(`[data-prob="${probId}"]`).forEach(c => { if (c.dataset.letter === correct) c.classList.add('correct'); });
+  document.getElementById('expl-' + probId)?.classList.add('open');
+}
+function markComplete(subj, id) {
+  const arr = getCompleted(subj);
+  if (!arr.includes(id)) { arr.push(id); saveCompleted(subj, arr); }
+  document.getElementById('complete-btn-' + id)?.classList.add('done');
+  document.getElementById('complete-btn-' + id) && (document.getElementById('complete-btn-' + id).textContent = '✓ Session complete');
+  document.querySelectorAll('.session-check[data-id="' + id + '"]').forEach(el => { el.classList.add('done'); el.textContent = '✓'; });
+  updateProgressBar(subj);
+}
+
+function buildSidebar(subj, sessions, weeks) {
+  const sidebar = document.getElementById('sidebar-' + subj);
+  const done = getCompleted(subj);
+  weeks.forEach(w => {
+    const lbl = document.createElement('div');
+    lbl.className = 'sidebar-week-label';
+    lbl.textContent = w.label + ' — ' + w.dates;
+    sidebar.appendChild(lbl);
+    sessions.filter(s => s.week === w.id).forEach(s => {
+      const a = document.createElement('a');
+      a.className = 'sidebar-session' + (done.includes(s.id) ? '' : '');
+      a.dataset.id = s.id;
+      a.href = '#';
+      const isDone = done.includes(s.id);
+      a.innerHTML = `<span class="session-dot" style="background:${w.mid}"></span><span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${s.day}: ${s.title}</span><span class="session-check ${isDone ? 'done' : ''}" data-id="${s.id}">${isDone ? '✓' : ''}</span>`;
+      a.addEventListener('click', e => { e.preventDefault(); renderSession(subj, s.id, sessions, weeks); });
+      sidebar.appendChild(a);
+    });
+  });
+}
+
+function renderSession(subj, id, sessions, weeks) {
+  const s = sessions.find(x => x.id === id);
+  const w = weeks.find(x => x.id === s.week);
+  document.querySelectorAll('#sidebar-' + subj + ' .sidebar-session').forEach(el => el.classList.toggle('active', el.dataset.id === id));
+
+  const main = document.getElementById('main-' + subj);
+  const done = getCompleted(subj);
+  const isDone = done.includes(id);
+
+  const skillColorMap = subj === 'stats'
+    ? { '1': {light:w.light,color:w.color}, '2': {light:'#E1F5EE',color:'#085041'}, '3': {light:'#FAEEDA',color:'#633806'}, '4': {light:'#FAECE7',color:'#712B13'},'A':{light:'#F1EFE8',color:'#5F5E5A'} }
+    : { 'U': {light:w.light,color:w.color} };
+
+  const skillChips = s.skills.map(sk => {
+    const key = subj === 'stats' ? sk[0] : 'U';
+    const c = skillColorMap[key] || {light:'#F1EFE8',color:'#5F5E5A'};
+    return `<span class="skill-chip" style="background:${c.light};color:${c.color}">${sk}</span>`;
+  }).join('');
+
+  const resourcesHTML = s.resources.map(r => `
+    <li class="resource-item">
+      <span class="resource-type">${r.type}</span>
+      <div><div class="resource-text">${r.text}</div>${r.note ? `<div class="resource-note">${r.note}</div>` : ''}</div>
+    </li>`).join('');
+
+  const problemsHTML = s.problems.map((p, pi) => {
+    const pid = subj + '-' + id + '-' + pi;
+    if (p.type === 'mc') {
+      const choices = p.choices.map(c => `<div class="mc-choice" data-letter="${c.letter}" data-correct="${p.correct}" data-prob="${pid}" onclick="checkAnswer(this)"><span class="mc-letter">${c.letter}</span><span>${c.text}</span></div>`).join('');
+      return `<div class="problem">
+        <div class="problem-q" onclick="toggleChoices('${pid}')"><span class="problem-number">${p.number}</span><span class="problem-type-badge mc-badge">MC</span><span>${p.q}</span></div>
+        <div class="mc-choices" id="choices-${pid}">${choices}</div>
+        <div class="answer-section" id="expl-${pid}"><div class="answer-label">Explanation</div><div>${p.explanation}</div></div>
+      </div>`;
+    } else {
+      const parts = p.parts.map((pt,i) => `<li style="margin-bottom:6px">(${String.fromCharCode(97+i)}) ${pt}</li>`).join('');
+      const ans = p.answer.replace(/\n\n/g,'</p><p>').replace(/\n/g,'<br>');
+      return `<div class="problem">
+        <div class="problem-q" onclick="toggleFRQ('${pid}')"><span class="problem-number">${p.number}</span><span class="problem-type-badge frq-badge">FRQ</span><span>${p.q}</span></div>
+        <div class="frq-body" id="frq-${pid}">
+          <ol style="padding-left:18px;margin-bottom:14px;font-size:13px;line-height:1.8">${parts}</ol>
+          <button class="show-answer-btn" onclick="toggleAnswer('${pid}')">Show sample answer</button>
+          <div class="answer-section" id="ans-${pid}" style="margin-left:-50px;margin-top:10px"><div class="answer-label">Sample Answer</div><p>${ans}</p></div>
+        </div>
+      </div>`;
+    }
+  }).join('');
+
+  main.innerHTML = `
+    <div class="session-header">
+      <div class="week-eyebrow" style="color:${w.mid}">${w.label} · ${s.date}</div>
+      <div class="session-title">${s.title}</div>
+      <div class="session-meta"><span>⏱ ${s.duration}</span><span style="color:${w.mid}">● ${w.theme}</span></div>
+    </div>
+    <div class="skill-chips">${skillChips}</div>
+    <p style="font-size:14px;color:var(--ink2);line-height:1.7;margin-bottom:24px">${s.summary}</p>
+    <div class="section-card">
+      <div class="section-header" onclick="toggleSection('res-${id}')">
+        <div class="section-icon" style="background:${w.light}">📚</div>
+        <div><div class="section-title-text">Resources & Khan Academy</div><div class="section-subtitle">${s.resources.length} links for this session</div></div>
+        <span class="section-chevron open" id="chev-res-${id}">›</span>
+      </div>
+      <div class="section-body open" id="res-${id}"><ul class="resource-list">${resourcesHTML}</ul></div>
+    </div>
+    <div class="section-card">
+      <div class="section-header" onclick="toggleSection('probs-${id}')">
+        <div class="section-icon" style="background:${w.light}">✏️</div>
+        <div><div class="section-title-text">Practice Problems</div><div class="section-subtitle">${s.problems.length} problems · ${s.problems.filter(p=>p.type==='mc').length} MC · ${s.problems.filter(p=>p.type==='frq').length} FRQ</div></div>
+        <span class="section-chevron open" id="chev-probs-${id}">›</span>
+      </div>
+      <div class="section-body open" id="probs-${id}">${problemsHTML}</div>
+    </div>
+    <div class="tip-box">💡 <strong>Exam tip:</strong> ${s.tip}</div>
+    <button class="complete-btn ${isDone ? 'done' : ''}" id="complete-btn-${id}" onclick="markComplete('${subj}','${id}')">
+      ${isDone ? '✓ Session complete' : '✓ Mark as complete'}
+    </button>`;
+}
+
+const statsWeeks = [
+  { id: 'w1', label: 'Week 1', color: '#4A3FA0', light: '#EEEDFE', mid: '#7F77DD', dates: 'Apr 17–23', theme: 'Exploring Data + Study Design' },
+  { id: 'w2', label: 'Week 2', color: '#B06010', light: '#FAEEDA', mid: '#EF9F27', dates: 'Apr 24–30', theme: 'Probability + Sampling Distributions' },
+  { id: 'w3', label: 'Week 3', color: '#A0321A', light: '#FAECE7', mid: '#D85A30', dates: 'May 1–7', theme: 'Significance Tests + Final Review' },
+];
+
+const statsSessions = [
+  {
+    id: 's1', week: 'w1', day: 'Day 1', date: 'Apr 17',
+    title: 'Displaying & Describing Data',
+    skills: ['1B', '1C', '2A', '2B'],
+    duration: '50 min',
+    summary: 'Categorical vs. quantitative variables, graphs (dotplot, histogram, boxplot), and describing shape, center, spread, and outliers.',
+    resources: [
+      { type: 'KA VIDEO', text: '<a href="https://www.khanacademy.org/math/ap-statistics/quantitative-data-ap" target="_blank">Displaying and describing quantitative data</a>', note: 'Start with "Comparing dot plots" through "Describing and comparing distributions"' },
+      { type: 'KA VIDEO', text: '<a href="https://www.khanacademy.org/math/ap-statistics/categorical-statistics-ap" target="_blank">Categorical data: one & two variables</a>', note: 'Bar charts, pie charts, two-way tables' },
+      { type: 'CB RESOURCE', text: '<a href="https://apcentral.collegeboard.org/courses/ap-statistics" target="_blank">AP Statistics Course & Exam Description</a>', note: 'Pages 30–50 cover Unit 1: Exploring One-Variable Data' },
+      { type: 'PRACTICE', text: '<a href="https://www.khanacademy.org/math/ap-statistics/quantitative-data-ap/ap-dotplots-histograms/e/describing-and-comparing-distributions" target="_blank">KA: Comparing distributions exercise set</a>', note: 'Aim for 80%+ before moving on' },
+    ],
+    problems: [
+      {
+        type: 'mc', number: 1,
+        q: 'A distribution of test scores is described as "right-skewed." Which of the following best describes this distribution?',
+        choices: [
+          { letter: 'A', text: 'The mean is less than the median' },
+          { letter: 'B', text: 'The mean is greater than the median' },
+          { letter: 'C', text: 'The mean equals the median' },
+          { letter: 'D', text: 'The distribution has no outliers' },
+        ],
+        correct: 'B',
+        explanation: 'In a right-skewed (positively skewed) distribution, the tail pulls the mean to the right, making the mean greater than the median. Think of a few very high outliers pulling the average up.'
+      },
+      {
+        type: 'mc', number: 2,
+        q: 'A boxplot for a dataset shows: Min = 10, Q1 = 20, Median = 30, Q3 = 50, Max = 80. Which of the following is true?',
+        choices: [
+          { letter: 'A', text: 'The distribution is symmetric' },
+          { letter: 'B', text: 'The IQR is 30' },
+          { letter: 'C', text: 'There are definitely outliers above Q3' },
+          { letter: 'D', text: 'The distribution is left-skewed' },
+        ],
+        correct: 'B',
+        explanation: 'IQR = Q3 – Q1 = 50 – 20 = 30. The distribution appears right-skewed (upper half more spread out: Q3–Median = 20, Median–Q1 = 10). No outliers can be confirmed without checking the 1.5×IQR fence.'
+      },
+      {
+        type: 'frq', number: 3,
+        q: 'A teacher records the number of hours 10 students studied for an exam: 2, 3, 3, 4, 5, 6, 6, 8, 10, 14.',
+        parts: [
+          'Calculate the mean and median. Show your work.',
+          'Identify the better measure of center for this dataset and explain why.',
+          'An 11th student studied 15 hours. Describe how this would affect the mean and median.',
+        ],
+        answer: `(a) Mean = (2+3+3+4+5+6+6+8+10+14)/10 = 61/10 = 6.1 hours. Median = average of 5th and 6th values (sorted) = (5+6)/2 = 5.5 hours.\n\n(b) The median is the better measure because the distribution is right-skewed (14 is a potential outlier pulling the mean up). The median is resistant to extreme values.\n\n(c) Adding 15 hours: the new mean = (61+15)/11 ≈ 6.9 (increases by ~0.8). The new median = 6th value of the sorted 11 = 6 (increases slightly from 5.5 to 6). The mean is more affected because it's not resistant to outliers.`
+      }
+    ],
+    tip: 'When describing any distribution, always use SOCS: Shape, Outliers, Center, Spread — in that order. AP graders expect this structure on FRQs.'
+  },
+  {
+    id: 's2', week: 'w1', day: 'Day 2', date: 'Apr 20',
+    title: 'Summary Statistics & Normal Distributions',
+    skills: ['2C'],
+    duration: '50 min',
+    summary: 'Mean, standard deviation, variance, percentiles, z-scores, and the empirical rule (68–95–99.7). Using normal tables and calculators.',
+    resources: [
+      { type: 'KA VIDEO', text: '<a href="https://www.khanacademy.org/math/ap-statistics/density-curves-normal-distribution-ap" target="_blank">Normal distributions & the empirical rule</a>', note: 'Watch "Normal distributions review" and "Z-scores" videos' },
+      { type: 'KA VIDEO', text: '<a href="https://www.khanacademy.org/math/ap-statistics/summarizing-quantitative-data" target="_blank">Summarizing quantitative data</a>', note: 'Standard deviation, variance, IQR sections' },
+      { type: 'TOOL', text: '<a href="https://stapplet.com/" target="_blank">StApplet — Normal probability calculator</a>', note: 'Great for visualizing normal areas; use alongside your TI-84' },
+      { type: 'CB RESOURCE', text: '<a href="https://apstudents.collegeboard.org/ap/pdf/ap-statistics-course-and-exam-description.pdf" target="_blank">CED Table A (z-table)</a> — get comfortable reading it', note: '' },
+    ],
+    problems: [
+      {
+        type: 'mc', number: 1,
+        q: 'Scores on a test are normally distributed with mean μ = 72 and standard deviation σ = 8. Approximately what percent of students scored between 56 and 88?',
+        choices: [
+          { letter: 'A', text: '68%' },
+          { letter: 'B', text: '95%' },
+          { letter: 'C', text: '99.7%' },
+          { letter: 'D', text: '50%' },
+        ],
+        correct: 'B',
+        explanation: '56 = 72 – 2(8) and 88 = 72 + 2(8), so this is within 2 standard deviations of the mean. By the empirical rule, approximately 95% of data falls within μ ± 2σ.'
+      },
+      {
+        type: 'mc', number: 2,
+        q: 'A student scores 80 on a test where the class mean is 70 and standard deviation is 5. What is her z-score, and what does it mean?',
+        choices: [
+          { letter: 'A', text: 'z = 2; she scored 2 points above the mean' },
+          { letter: 'B', text: 'z = 2; she scored 2 standard deviations above the mean' },
+          { letter: 'C', text: 'z = 10; she scored 10 points above the mean' },
+          { letter: 'D', text: 'z = 0.5; she scored in the top 50%' },
+        ],
+        correct: 'B',
+        explanation: 'z = (80 – 70)/5 = 10/5 = 2. A z-score measures how many standard deviations an observation falls from the mean — not the raw difference. She is 2 SDs above the mean.'
+      },
+      {
+        type: 'frq', number: 3,
+        q: 'The heights of adult males in a population are approximately normally distributed with mean 70 inches and standard deviation 3 inches.',
+        parts: [
+          'What proportion of males are taller than 76 inches? Show your z-score calculation.',
+          'Between what two heights do the middle 95% of males fall?',
+          'A male is told he is at the 16th percentile. Approximately how tall is he? Explain.',
+        ],
+        answer: `(a) z = (76 – 70)/3 = 2. P(Z > 2) ≈ 0.0228, or about 2.28% of males. (Using Table A: P(Z < 2) = 0.9772, so P(Z > 2) = 1 – 0.9772 = 0.0228.)\n\n(b) The middle 95% spans μ ± 2σ = 70 ± 2(3) = 70 ± 6 = [64, 76] inches.\n\n(c) The 16th percentile ≈ μ – 1σ = 70 – 3 = 67 inches. By the empirical rule, 16% of the data falls below μ – 1σ (half of the 32% that falls outside 1 SD on both sides).`
+      }
+    ],
+    tip: 'Z-scores are the bridge between raw data and probability. Every normal distribution problem comes down to: find z, then find area. Practice this loop until it\'s automatic.'
+  },
+  {
+    id: 's3', week: 'w1', day: 'Day 3', date: 'Apr 23',
+    title: 'Regression & Bivariate Data',
+    skills: ['2C', '2D'],
+    duration: '55 min',
+    summary: 'Scatterplots, correlation (r), least-squares regression line, residuals, residual plots, r², and the effects of outliers on regression.',
+    resources: [
+      { type: 'KA VIDEO', text: '<a href="https://www.khanacademy.org/math/ap-statistics/bivariate-data-ap" target="_blank">Exploring bivariate numerical data</a>', note: 'Work through scatterplots → LSRL → residuals in order' },
+      { type: 'KA VIDEO', text: '<a href="https://www.khanacademy.org/math/ap-statistics/bivariate-data-ap/assessing-validity-residuals-computer-output/v/introduction-to-residuals-and-least-squares-regression" target="_blank">Introduction to residuals</a>', note: 'Key concept — residual = observed – predicted' },
+      { type: 'TOOL', text: '<a href="https://www.desmos.com/statistics" target="_blank">Desmos Statistics</a>', note: 'Input data points and see the LSRL instantly — great for intuition building' },
+      { type: 'PRACTICE', text: '<a href="https://www.khanacademy.org/math/ap-statistics/bivariate-data-ap/correlation-coefficient-r/e/correlation-coefficient-intuition-examples" target="_blank">KA: Correlation coefficient exercises</a>', note: '' },
+    ],
+    problems: [
+      {
+        type: 'mc', number: 1,
+        q: 'A regression line for predicting weight (lbs) from height (in) is ŷ = −130 + 4.5x. A person is 68 inches tall and weighs 185 lbs. What is the residual?',
+        choices: [
+          { letter: 'A', text: '21' },
+          { letter: 'B', text: '−21' },
+          { letter: 'C', text: '11' },
+          { letter: 'D', text: '−11' },
+        ],
+        correct: 'C',
+        explanation: 'Predicted weight: ŷ = –130 + 4.5(68) = –130 + 306 = 176 lbs. Residual = observed – predicted = 185 – 176 = 11. Positive residual means the actual value is above the line.'
+      },
+      {
+        type: 'mc', number: 2,
+        q: 'A study finds r² = 0.81 for a linear regression of y on x. Which interpretation is correct?',
+        choices: [
+          { letter: 'A', text: '81% of the variation in x is explained by y' },
+          { letter: 'B', text: '81% of the variation in y is explained by the linear relationship with x' },
+          { letter: 'C', text: 'There is an 81% probability that the relationship is linear' },
+          { letter: 'D', text: 'The correlation coefficient r = 0.81' },
+        ],
+        correct: 'B',
+        explanation: 'r² is the coefficient of determination. It tells us the proportion of the variability in the response variable (y) that is explained by the linear model. r = √0.81 = 0.9 (or –0.9), not 0.81.'
+      },
+      {
+        type: 'frq', number: 3,
+        q: 'Data on study hours (x) and exam scores (y) for 8 students gives: x̄ = 4, ȳ = 74, sx = 1.5, sy = 10, r = 0.85.',
+        parts: [
+          'Calculate the slope and y-intercept of the least-squares regression line.',
+          'Interpret the slope in the context of the problem.',
+          'A student studied 6 hours. Predict their score and identify any concern with this prediction.',
+        ],
+        answer: `(a) Slope: b₁ = r(sy/sx) = 0.85(10/1.5) = 0.85(6.67) ≈ 5.67. Y-intercept: b₀ = ȳ – b₁x̄ = 74 – 5.67(4) = 74 – 22.68 ≈ 51.3. LSRL: ŷ = 51.3 + 5.67x\n\n(b) For each additional hour studied, the predicted exam score increases by approximately 5.67 points.\n\n(c) ŷ = 51.3 + 5.67(6) = 51.3 + 34.0 = 85.3. Concern: 6 hours is at the edge of (or slightly beyond) the data range (x̄ = 4, likely max near 6–7), so this may be slight extrapolation. Predictions become less reliable outside the range of the data.`
+      }
+    ],
+    tip: 'Residual plots should show NO pattern — random scatter means the linear model is appropriate. If you see a curve, the relationship is nonlinear. This comes up constantly on the AP exam.'
+  },
+  {
+    id: 's4', week: 'w2', day: 'Day 1', date: 'Apr 24',
+    title: 'Probability Rules & Random Variables',
+    skills: ['3A', '3B'],
+    duration: '55 min',
+    summary: 'Basic probability rules, independence, conditional probability, discrete vs. continuous random variables, expected value, variance, binomial distributions, and geometric distributions.',
+    resources: [
+      { type: 'KA VIDEO', text: '<a href="https://www.khanacademy.org/math/ap-statistics/probability-ap" target="_blank">Basic probability rules</a>', note: 'Addition rule, multiplication rule, conditional probability' },
+      { type: 'KA VIDEO', text: '<a href="https://www.khanacademy.org/math/ap-statistics/random-variables-ap" target="_blank">Random variables and probability distributions</a>', note: 'Expected value, binomial distribution, geometric distribution' },
+      { type: 'KA VIDEO', text: '<a href="https://www.khanacademy.org/math/ap-statistics/random-variables-ap/binomial-random-variable/v/binomial-distribution" target="_blank">Binomial distribution (video)</a>', note: 'B(n, p): conditions, formula, mean, SD' },
+      { type: 'PRACTICE', text: '<a href="https://www.khanacademy.org/math/ap-statistics/random-variables-ap/binomial-random-variable/e/identifying-binomial-variables" target="_blank">KA: Identifying binomial conditions exercise</a>', note: '' },
+    ],
+    problems: [
+      {
+        type: 'mc', number: 1,
+        q: 'A random variable X has the following distribution: P(X=1)=0.2, P(X=2)=0.5, P(X=3)=0.3. What is E(X)?',
+        choices: [
+          { letter: 'A', text: '1.8' },
+          { letter: 'B', text: '2.0' },
+          { letter: 'C', text: '2.1' },
+          { letter: 'D', text: '2.5' },
+        ],
+        correct: 'C',
+        explanation: 'E(X) = 1(0.2) + 2(0.5) + 3(0.3) = 0.2 + 1.0 + 0.9 = 2.1. Expected value is the weighted average of all possible values.'
+      },
+      {
+        type: 'mc', number: 2,
+        q: 'A basketball player makes 70% of free throws. In a game she attempts 10 free throws. Assuming independence, what is the probability she makes exactly 7?',
+        choices: [
+          { letter: 'A', text: 'C(10,7)(0.7)⁷(0.3)³ ≈ 0.267' },
+          { letter: 'B', text: '(0.7)⁷ ≈ 0.082' },
+          { letter: 'C', text: '0.70' },
+          { letter: 'D', text: 'C(10,7)(0.3)⁷(0.7)³ ≈ 0.009' },
+        ],
+        correct: 'A',
+        explanation: 'This is a binomial setting: fixed n=10, two outcomes, independent, constant p=0.7. P(X=7) = C(10,7)(0.7)⁷(0.3)³ = 120(0.0824)(0.027) ≈ 0.267.'
+      },
+      {
+        type: 'frq', number: 3,
+        q: 'A quality inspector checks light bulbs. Each bulb independently has a 5% chance of being defective.',
+        parts: [
+          'What is the probability that the FIRST defective bulb is found on the 4th inspection? Name the distribution.',
+          'What is the expected number of bulbs inspected until the first defective is found?',
+          'If 20 bulbs are inspected, what is the expected number of defective bulbs and the standard deviation?',
+        ],
+        answer: `(a) Geometric distribution: P(X=4) = (0.95)³(0.05) = (0.857)(0.05) ≈ 0.0429. Conditions: each trial is independent, two outcomes, constant p = 0.05, counting trials until first success.\n\n(b) E(X) = 1/p = 1/0.05 = 20 bulbs.\n\n(c) Binomial B(20, 0.05): E(X) = np = 20(0.05) = 1 defective bulb. SD = √(np(1–p)) = √(20 × 0.05 × 0.95) = √(0.95) ≈ 0.975.`
+      }
+    ],
+    tip: 'Know the four BINS conditions for binomial: Binary outcomes, Independent trials, fixed Number of trials, Same probability. If any is violated, it\'s not binomial.'
+  },
+  {
+    id: 's5', week: 'w2', day: 'Day 2', date: 'Apr 27',
+    title: 'Sampling Distributions & CLT',
+    skills: ['3C', '1D'],
+    duration: '55 min',
+    summary: 'Sampling distributions of x̄ and p̂, the Central Limit Theorem, standard error, and conditions for normal approximation.',
+    resources: [
+      { type: 'KA VIDEO', text: '<a href="https://www.khanacademy.org/math/ap-statistics/sampling-distribution-ap" target="_blank">Sampling distributions (full unit)</a>', note: 'Watch "Sampling distribution of sample mean" and "Sampling distribution of sample proportion"' },
+      { type: 'KA VIDEO', text: '<a href="https://www.khanacademy.org/math/ap-statistics/sampling-distribution-ap/what-is-sampling-distribution/v/central-limit-theorem" target="_blank">Central Limit Theorem video</a>', note: 'This is one of the most important concepts on the AP exam' },
+      { type: 'VISUAL', text: '<a href="https://onlinestatbook.com/stat_sim/sampling_dist/" target="_blank">Sampling Distribution Simulator</a>', note: 'See the CLT in action — change sample size and watch the distribution become normal' },
+    ],
+    problems: [
+      {
+        type: 'mc', number: 1,
+        q: 'A population has mean μ = 50 and standard deviation σ = 20. A sample of n = 100 is taken. What is the standard deviation of the sampling distribution of x̄?',
+        choices: [
+          { letter: 'A', text: '20' },
+          { letter: 'B', text: '2' },
+          { letter: 'C', text: '0.2' },
+          { letter: 'D', text: '200' },
+        ],
+        correct: 'B',
+        explanation: 'Standard error of x̄ = σ/√n = 20/√100 = 20/10 = 2. This is the standard deviation of the sampling distribution — it measures how much sample means typically vary from the population mean.'
+      },
+      {
+        type: 'mc', number: 2,
+        q: 'A random sample of 80 students is drawn from a school where 60% own a pet. What is the probability that the sample proportion is greater than 0.65?',
+        choices: [
+          { letter: 'A', text: 'About 0.18' },
+          { letter: 'B', text: 'About 0.32' },
+          { letter: 'C', text: 'About 0.65' },
+          { letter: 'D', text: 'About 0.82' },
+        ],
+        correct: 'A',
+        explanation: 'μ(p̂) = 0.60. SE = √(0.6×0.4/80) = √(0.003) ≈ 0.0548. z = (0.65 – 0.60)/0.0548 ≈ 0.91. P(Z > 0.91) ≈ 1 – 0.8186 = 0.1814 ≈ 0.18.'
+      },
+      {
+        type: 'frq', number: 3,
+        q: 'At a large university, 40% of students work part-time. A researcher plans to take a simple random sample of 200 students.',
+        parts: [
+          'Describe the sampling distribution of the sample proportion p̂. Verify all necessary conditions.',
+          'What is the probability that the sample proportion is between 0.35 and 0.45?',
+          'Why does the Central Limit Theorem apply here even though the population distribution is not normal?',
+        ],
+        answer: `(a) Shape: Approximately normal because np = 200(0.4) = 80 ≥ 10 and n(1–p) = 200(0.6) = 120 ≥ 10 ✓. Independence: n = 200 ≤ 10% of university population ✓. Center: μ(p̂) = p = 0.40. Spread: σ(p̂) = √(0.4×0.6/200) ≈ 0.0346.\n\n(b) z for 0.35: (0.35–0.40)/0.0346 ≈ –1.45. z for 0.45: (0.45–0.40)/0.0346 ≈ 1.45. P(–1.45 < Z < 1.45) = 2(0.9265) – 1 ≈ 0.853 or about 85%.\n\n(c) The CLT states that when sample size is large enough (n ≥ 30, or np ≥ 10 and n(1–p) ≥ 10 for proportions), the sampling distribution is approximately normal regardless of the population's shape. n = 200 is sufficiently large.`
+      }
+    ],
+    tip: 'The CLT is not magic — it\'s a mathematical theorem. The key phrase for the exam: "The sampling distribution of x̄ is approximately normal because n = __ is large (≥ 30)." Memorize this sentence.'
+  },
+  {
+    id: 's6', week: 'w2', day: 'Day 3', date: 'Apr 30',
+    title: 'Confidence Intervals',
+    skills: ['1D', '4A', '4B', '4C', '4D'],
+    duration: '60 min',
+    summary: 'One-sample z-interval for p, one-sample t-interval for μ, checking conditions (Random, Normal, Independent), interpreting intervals, and the meaning of "confidence level."',
+    resources: [
+      { type: 'KA VIDEO', text: '<a href="https://www.khanacademy.org/math/ap-statistics/estimating-confidence-ap" target="_blank">Confidence intervals (full unit)</a>', note: 'Work through all sections: z-intervals, t-intervals, and interpreting CI' },
+      { type: 'KA VIDEO', text: '<a href="https://www.khanacademy.org/math/ap-statistics/estimating-confidence-ap/one-sample-t-interval-mean/v/introduction-to-t-statistics" target="_blank">Introduction to t-statistics</a>', note: 'Understand why we use t instead of z when σ is unknown' },
+      { type: 'CB RESOURCE', text: '<a href="https://apcentral.collegeboard.org/media/pdf/statistics-sample-questions-ap-exam.pdf" target="_blank">AP Statistics sample FRQs — inference problems</a>', note: '' },
+    ],
+    problems: [
+      {
+        type: 'mc', number: 1,
+        q: 'A 95% confidence interval for a population mean is (42.3, 51.7). Which interpretation is correct?',
+        choices: [
+          { letter: 'A', text: 'There is a 95% probability that μ is between 42.3 and 51.7' },
+          { letter: 'B', text: '95% of individual observations fall between 42.3 and 51.7' },
+          { letter: 'C', text: 'We are 95% confident that the interval (42.3, 51.7) captures the true population mean' },
+          { letter: 'D', text: 'If we sampled again, 95% of new observations would be within this interval' },
+        ],
+        correct: 'C',
+        explanation: 'The correct interpretation references the METHOD, not the probability that μ is in this specific interval. Once computed, the interval either does or does not contain μ. "95% confident" means that 95% of intervals constructed this way will capture μ.'
+      },
+      {
+        type: 'mc', number: 2,
+        q: 'All else equal, which change would produce a NARROWER confidence interval?',
+        choices: [
+          { letter: 'A', text: 'Increasing confidence level from 90% to 99%' },
+          { letter: 'B', text: 'Increasing sample size from n=50 to n=200' },
+          { letter: 'C', text: 'Increasing population standard deviation' },
+          { letter: 'D', text: 'Decreasing sample size from n=200 to n=50' },
+        ],
+        correct: 'B',
+        explanation: 'Margin of error = z*(σ/√n). Increasing n increases √n, which decreases the margin of error → narrower interval. Higher confidence level requires a larger z*, widening the interval. Higher σ also widens it.'
+      },
+      {
+        type: 'frq', number: 3,
+        q: 'A nutritionist wants to estimate the mean daily protein intake (grams) of college athletes. A random sample of 25 athletes had mean x̄ = 142g and standard deviation s = 28g. Assume protein intake is approximately normal.',
+        parts: [
+          'Identify the appropriate inference procedure and verify all conditions.',
+          'Construct a 95% confidence interval. Show all work.',
+          'A sports magazine claims the true mean is 155g. Does your interval support or contradict this claim? Explain.',
+        ],
+        answer: `(a) One-sample t-interval for μ (σ unknown, using s). Conditions: Random: stated to be a random sample ✓. Normal/Large Sample: n = 25 < 30, but we're told the population is approximately normal ✓. Independence: 25 athletes < 10% of all college athletes ✓.\n\n(b) df = n–1 = 24. t* for 95% CI = 2.064 (from t-table). CI = x̄ ± t*(s/√n) = 142 ± 2.064(28/√25) = 142 ± 2.064(5.6) = 142 ± 11.56 = (130.44, 153.56).\n\n(c) The interval (130.44, 153.56) does NOT contain 155g. Therefore the interval contradicts the magazine's claim — 155g is not a plausible value for μ at 95% confidence.`
+      }
+    ],
+    tip: 'Confidence intervals have 3 required parts on the AP exam: (1) state the procedure name, (2) verify all 3 conditions (Random, Normal, Independent), (3) state/interpret the interval. Missing any part costs points.'
+  },
+  {
+    id: 's7', week: 'w3', day: 'Day 1', date: 'May 1',
+    title: 'Significance Tests (z, t, chi-square)',
+    skills: ['1E', '1F', '3D', '3E', '4A', '4E'],
+    duration: '60 min',
+    summary: 'Setting up hypotheses, p-values, test statistics (z, t, χ²), significance level, Type I/II errors, and power. Covers one-sample tests and chi-square goodness of fit.',
+    resources: [
+      { type: 'KA VIDEO', text: '<a href="https://www.khanacademy.org/math/ap-statistics/tests-significance-ap" target="_blank">Significance tests — full unit</a>', note: 'Work through one-proportion z-test, one-sample t-test, and errors' },
+      { type: 'KA VIDEO', text: '<a href="https://www.khanacademy.org/math/ap-statistics/chi-square-tests/chi-square-goodness-of-fit-tests/v/chi-square-statistic" target="_blank">Chi-square goodness of fit</a>', note: 'Understand the chi-square statistic and when to use it' },
+      { type: 'PRACTICE', text: '<a href="https://www.khanacademy.org/math/ap-statistics/tests-significance-ap/idea-significance-tests/e/estimating-p-values-from-simulations" target="_blank">KA: Estimating p-values exercise</a>', note: '' },
+      { type: 'CB RESOURCE', text: '<a href="https://apcentral.collegeboard.org/media/pdf/ap-statistics-frq-2023.pdf" target="_blank">2023 AP Statistics Free Response Questions</a>', note: 'Look at Q4 and Q5 — they are almost always inference problems' },
+    ],
+    problems: [
+      {
+        type: 'mc', number: 1,
+        q: 'A researcher conducts a significance test and gets p-value = 0.03 with α = 0.05. Which conclusion is most appropriate?',
+        choices: [
+          { letter: 'A', text: 'Accept H₀; there is not sufficient evidence against it' },
+          { letter: 'B', text: 'Reject H₀; there is convincing evidence for Hₐ' },
+          { letter: 'C', text: 'The probability that H₀ is true is 0.03' },
+          { letter: 'D', text: 'The probability that Hₐ is true is 0.97' },
+        ],
+        correct: 'B',
+        explanation: 'p-value = 0.03 < α = 0.05, so we reject H₀. We never "accept" H₀ — only "fail to reject" it. The p-value is not the probability H₀ is true; it\'s the probability of getting data this extreme IF H₀ were true.'
+      },
+      {
+        type: 'mc', number: 2,
+        q: 'A researcher commits a Type II error. Which of the following has occurred?',
+        choices: [
+          { letter: 'A', text: 'Rejected H₀ when H₀ was actually true' },
+          { letter: 'B', text: 'Failed to reject H₀ when H₀ was actually true' },
+          { letter: 'C', text: 'Rejected H₀ when Hₐ was actually true' },
+          { letter: 'D', text: 'Failed to reject H₀ when Hₐ was actually true' },
+        ],
+        correct: 'D',
+        explanation: 'Type I error = rejecting a true H₀ (false positive). Type II error = failing to reject a false H₀ (false negative). In context: you missed a real effect — Hₐ was true but you didn\'t detect it.'
+      },
+      {
+        type: 'frq', number: 3,
+        q: 'A company claims that 30% of customers prefer their new packaging. In a random sample of 150 customers, 54 preferred the new packaging.',
+        parts: [
+          'State the null and alternative hypotheses for testing whether the true proportion differs from 30%.',
+          'Calculate the test statistic and p-value. Show all work.',
+          'At α = 0.05, what conclusion do you draw? Write a conclusion in context.',
+        ],
+        answer: `(a) H₀: p = 0.30 (true proportion preferring new packaging is 30%). Hₐ: p ≠ 0.30 (two-sided — "differs from").\n\n(b) Conditions: Random ✓, np₀ = 150(0.3) = 45 ≥ 10 ✓, n(1–p₀) = 105 ≥ 10 ✓, independence (150 < 10% of customers) ✓. p̂ = 54/150 = 0.36. z = (0.36 – 0.30)/√(0.3×0.7/150) = 0.06/√(0.0014) = 0.06/0.0374 ≈ 1.60. p-value = 2P(Z > 1.60) = 2(0.0548) ≈ 0.110.\n\n(c) Since p-value = 0.110 > α = 0.05, we fail to reject H₀. We do not have convincing evidence that the true proportion of customers who prefer the new packaging differs from 30%.`
+      }
+    ],
+    tip: 'The conclusion to every significance test has two parts: (1) compare p-value to α, state "reject" or "fail to reject H₀," and (2) interpret in context WITHOUT using the word "prove." Use "convincing evidence" instead.'
+  },
+  {
+    id: 's8', week: 'w3', day: 'Day 2', date: 'May 4',
+    title: 'Mixed FRQ Practice',
+    skills: ['4A', '4B', '4C', '4D', '4E'],
+    duration: '90 min',
+    summary: 'Full free-response practice combining all units. Focus on writing complete, context-specific conclusions. Simulate exam conditions: no notes, timed.',
+    resources: [
+      { type: 'CB RESOURCE', text: '<a href="https://apcentral.collegeboard.org/courses/ap-statistics/exam/past-exam-questions" target="_blank">College Board — All past AP Statistics FRQs</a>', note: 'Do 2022 or 2023 FRQ set under timed conditions (90 min for 6 questions)' },
+      { type: 'CB RESOURCE', text: '<a href="https://apcentral.collegeboard.org/media/pdf/ap-statistics-course-and-exam-description.pdf" target="_blank">AP Statistics Exam Description — scoring guidelines</a>', note: 'Review the scoring rubrics — understand what "essentially correct" vs "partially correct" means' },
+      { type: 'TOOL', text: '<a href="https://stapplet.com/" target="_blank">StApplet</a>', note: 'Use to check your work after attempting problems by hand' },
+      { type: 'PRACTICE', text: '<a href="https://www.khanacademy.org/math/ap-statistics/tests-significance-ap/error-probabilities-power/e/type-i-and-type-ii-errors" target="_blank">KA: Type I/II errors exercise</a>', note: '' },
+    ],
+    problems: [
+      {
+        type: 'frq', number: 1,
+        q: '[2023 Style — Investigative Task] A school counselor wants to know if students who participate in extracurricular activities have higher GPAs. She randomly selects 30 students who participate and 30 who do not. Results: activity group x̄ = 3.2, s = 0.4; no-activity group x̄ = 3.0, s = 0.5.',
+        parts: [
+          'Name the appropriate test and state all hypotheses.',
+          'Verify the conditions for the test.',
+          'The test statistic is t = 1.87 with p-value = 0.033. Write a complete conclusion at α = 0.05.',
+          'The counselor concludes that extracurricular activities CAUSE higher GPAs. Critique this conclusion.',
+        ],
+        answer: `(a) Two-sample t-test for the difference in means (μ₁ – μ₂). H₀: μ₁ – μ₂ = 0 (no difference in mean GPA). Hₐ: μ₁ – μ₂ > 0 (activity group has higher mean GPA, one-sided).\n\n(b) Random: stated random selection ✓. Normal: both n = 30 ≥ 30, so CLT applies ✓. Independence: each group < 10% of all students ✓. Independent groups: the two groups are separate ✓.\n\n(c) Since p-value = 0.033 < α = 0.05, we reject H₀. There is convincing evidence that students who participate in extracurricular activities have a higher mean GPA than those who do not.\n\n(d) This was an observational study, not a randomized experiment — students were NOT randomly assigned to participate or not. Therefore, we cannot establish causation. There may be confounding variables (e.g., more motivated students both join activities AND study more). The counselor's causal claim is not justified.`
+      },
+      {
+        type: 'frq', number: 2,
+        q: 'A poll of 400 randomly selected voters asks if they support a new housing policy. Results: 224 support it.',
+        parts: [
+          'Construct a 95% confidence interval for the proportion who support the policy.',
+          'Based on your interval, would you conclude that a majority (more than 50%) support the policy? Explain.',
+          'How would the interval change if the sample size were 1600 instead of 400?',
+        ],
+        answer: `(a) p̂ = 224/400 = 0.56. Conditions: Random ✓, np̂ = 224 ≥ 10 ✓, n(1–p̂) = 176 ≥ 10 ✓, 400 < 10% of all voters ✓. SE = √(0.56×0.44/400) = √(0.000616) ≈ 0.0248. z* = 1.96. CI = 0.56 ± 1.96(0.0248) = 0.56 ± 0.0486 = (0.511, 0.609).\n\n(b) Yes — the entire interval (0.511, 0.609) lies above 0.50. All plausible values for the true proportion are above 50%, so we have convincing evidence that a majority supports the policy.\n\n(c) With n = 1600 (4× larger), SE = √(0.56×0.44/1600) ≈ 0.0124 (half as large). The margin of error would be halved: approximately ±0.024, giving interval (0.536, 0.584). Larger sample → narrower interval.`
+      }
+    ],
+    tip: 'On the real exam, the investigative task (Question 6) is worth more points and tests synthesis across units. Practice writing full, multi-part solutions where each part builds on the last.'
+  },
+  {
+    id: 's9', week: 'w3', day: 'Day 3', date: 'May 6',
+    title: 'Final Review & Formula Sheet',
+    skills: ['All skills'],
+    duration: '45 min',
+    summary: 'Light review only. Skim formulas, re-read weak areas, and rest. No new concepts today. Confidence, not cramming.',
+    resources: [
+      { type: 'CB RESOURCE', text: '<a href="https://apstudents.collegeboard.org/ap/pdf/ap-statistics-course-and-exam-description.pdf" target="_blank">Official AP Statistics formula sheet</a>', note: 'This exact sheet is given during the exam — study it, don\'t memorize it' },
+      { type: 'REVIEW', text: '<a href="https://www.khanacademy.org/math/ap-statistics" target="_blank">KA AP Statistics — unit progress dashboard</a>', note: 'Check which units have low mastery and skim those exercises' },
+      { type: 'TOOL', text: '<a href="https://apcentral.collegeboard.org/courses/ap-statistics/exam" target="_blank">AP Exam logistics — timing, format, what to bring</a>', note: 'Know: 40 MC (90 min) + 6 FRQ (90 min). 5 short FRQ + 1 investigative task.' },
+    ],
+    problems: [
+      {
+        type: 'mc', number: 1,
+        q: 'Quick review: Which of the following is NOT a condition for conducting a two-sample t-test?',
+        choices: [
+          { letter: 'A', text: 'The samples are independent of each other' },
+          { letter: 'B', text: 'Each sample is taken randomly' },
+          { letter: 'C', text: 'The population standard deviations must be equal' },
+          { letter: 'D', text: 'Each sample size is large OR the populations are approximately normal' },
+        ],
+        correct: 'C',
+        explanation: 'Equal variances (homoscedasticity) is NOT required for the two-sample t-test in AP Statistics. Welch\'s t-test handles unequal variances. The required conditions are: Random, Normal/Large Sample, and Independent groups.'
+      },
+      {
+        type: 'mc', number: 2,
+        q: 'A lurking variable is best described as:',
+        choices: [
+          { letter: 'A', text: 'A variable that is part of the study but has no effect' },
+          { letter: 'B', text: 'An explanatory variable that is directly manipulated' },
+          { letter: 'C', text: 'A variable not in the study that affects the response and is related to the explanatory variable' },
+          { letter: 'D', text: 'A variable measured with error' },
+        ],
+        correct: 'C',
+        explanation: 'A lurking (confounding) variable creates the appearance of an association between x and y when the real driver is a third variable. This is why observational studies can\'t establish causation — lurking variables can\'t be controlled.'
+      }
+    ],
+    tip: '🎯 Exam day checklist: Calculator with fresh batteries (TI-84 recommended). Pencils + pen. Photo ID. Sleep 8 hours. Eat breakfast. You\'ve got this.'
+  },
+];
+
+
+const physicsWeeks = [
+  { id:'w1', label:'Week 1', color:'#0F6E56', light:'#E1F5EE', mid:'#1D9E75', dates:'Apr 17–23', theme:'Kinematics + Dynamics' },
+  { id:'w2', label:'Week 2', color:'#185FA5', light:'#E6F1FB', mid:'#378ADD', dates:'Apr 24–30', theme:'Energy, Momentum + Rotation' },
+  { id:'w3', label:'Week 3', color:'#633806', light:'#FAEEDA', mid:'#EF9F27', dates:'May 1–6',  theme:'Oscillations, Fluids + Review' },
+];
+
+const physicsSessions = [
+  {
+    id:'ph1', week:'w1', day:'Day 1', date:'Apr 17',
+    title:'Kinematics', skills:['Unit 1'], duration:'55 min',
+    summary:'1D and 2D motion, displacement, velocity, acceleration, kinematic equations, free-fall, and projectile motion — the foundation of everything in mechanics.',
+    resources:[
+      { type:'KA VIDEO', text:'<a href="https://www.khanacademy.org/science/ap-college-physics-1/ap-one-dimensional-motion" target="_blank">1D kinematics (full unit)</a>', note:'Displacement, velocity, acceleration, kinematic equations — do all exercises' },
+      { type:'KA VIDEO', text:'<a href="https://www.khanacademy.org/science/ap-college-physics-1/ap-two-dimensional-motion" target="_blank">2D motion & projectile motion</a>', note:'Decompose into x- and y-components; solve each direction independently' },
+      { type:'TOOL', text:'<a href="https://phet.colorado.edu/en/simulations/projectile-motion" target="_blank">PhET: Projectile Motion Simulation</a>', note:'Visualize how launch angle and speed affect range and hang time' },
+      { type:'CB RESOURCE', text:'<a href="https://apcentral.collegeboard.org/courses/ap-physics-1/exam" target="_blank">AP Physics 1 Exam page — formula sheet & FRQ samples</a>', note:'The formula sheet is provided on exam day; study what each formula means, not just the symbols' },
+    ],
+    problems:[
+      { type:'mc', number:1,
+        q:'A ball is thrown horizontally at 15 m/s from a cliff 80 m high. How far from the base of the cliff does it land? (g = 10 m/s²)',
+        choices:[{letter:'A',text:'40 m'},{letter:'B',text:'60 m'},{letter:'C',text:'80 m'},{letter:'D',text:'120 m'}],
+        correct:'B',
+        explanation:'Find time to fall: 80 = ½(10)t² → t = 4 s. Horizontal distance = 15 × 4 = 60 m. Horizontal and vertical motion are completely independent — horizontal speed stays constant while the ball free-falls vertically.' },
+      { type:'mc', number:2,
+        q:'A car accelerates from rest at 3 m/s² for 6 seconds. What is the displacement?',
+        choices:[{letter:'A',text:'18 m'},{letter:'B',text:'27 m'},{letter:'C',text:'54 m'},{letter:'D',text:'108 m'}],
+        correct:'C',
+        explanation:'x = ½at² = ½(3)(36) = 54 m. Alternatively: v_f = 18 m/s, average v = 9 m/s, x = 9 × 6 = 54 m.' },
+      { type:'frq', number:3,
+        q:'A student drops a ball from a window and it takes 2.5 s to hit the ground.',
+        parts:[
+          'How high is the window? Show all work and equations used.',
+          'What is the ball\'s velocity just before impact?',
+          'If instead the ball were thrown horizontally at 8 m/s, how would the time to hit the ground change? Explain.',
+        ],
+        answer:'(a) h = ½gt² = ½(10)(2.5)² = 31.25 m\n\n(b) v = gt = 10(2.5) = 25 m/s downward\n\n(c) The time would remain 2.5 s. Horizontal velocity does not affect vertical free-fall. The vertical equation h = ½gt² depends only on height and g — not on horizontal motion. The ball still falls the same vertical distance under the same gravitational acceleration.' },
+    ],
+    tip:'For projectile motion, the key insight is independence: horizontal (constant v) and vertical (free-fall, a = g) are completely separate. Solve each direction independently, linking only through time.' },
+
+  {
+    id:'ph2', week:'w1', day:'Day 2', date:'Apr 20',
+    title:"Newton's Laws & Forces", skills:['Unit 2'], duration:'60 min',
+    summary:"Newton's 1st, 2nd, 3rd laws, free-body diagrams, friction, normal force, tension, net force, and equilibrium.",
+    resources:[
+      { type:'KA VIDEO', text:'<a href="https://www.khanacademy.org/science/ap-college-physics-1/ap-forces-newtons-laws" target="_blank">Forces and Newton\'s Laws (full unit)</a>', note:'Do the free-body diagram exercises — they appear on nearly every AP Physics FRQ' },
+      { type:'TOOL', text:'<a href="https://phet.colorado.edu/en/simulations/forces-and-motion-basics" target="_blank">PhET: Forces and Motion Basics</a>', note:'Build intuition for net force and acceleration before doing problems' },
+      { type:'CB RESOURCE', text:'<a href="https://apcentral.collegeboard.org/courses/ap-physics-1/exam/past-exam-questions" target="_blank">Past AP Physics 1 FRQs</a>', note:'Look for dynamics problems — they always require a labeled FBD' },
+    ],
+    problems:[
+      { type:'mc', number:1,
+        q:'A 5 kg block is pushed across a frictionless surface with a force of 20 N. What is the acceleration?',
+        choices:[{letter:'A',text:'0.25 m/s²'},{letter:'B',text:'4 m/s²'},{letter:'C',text:'100 m/s²'},{letter:'D',text:'25 m/s²'}],
+        correct:'B',
+        explanation:'F = ma → a = F/m = 20/5 = 4 m/s². On a frictionless surface, the only horizontal force is the applied force.' },
+      { type:'mc', number:2,
+        q:'A 10 kg box is pushed at constant velocity. μk = 0.3, g = 10 m/s². What is the applied force?',
+        choices:[{letter:'A',text:'3 N'},{letter:'B',text:'30 N'},{letter:'C',text:'100 N'},{letter:'D',text:'300 N'}],
+        correct:'B',
+        explanation:'Constant velocity → net force = 0 → applied force = friction force = μk × m × g = 0.3 × 10 × 10 = 30 N.' },
+      { type:'frq', number:3,
+        q:'Block A (3 kg) sits on a frictionless table and is connected by a string over a pulley to Block B (2 kg) hanging freely.',
+        parts:[
+          'Draw and label a free-body diagram for each block.',
+          'Calculate the acceleration of the system.',
+          'Calculate the tension in the string.',
+        ],
+        answer:'(a) Block A: tension T pointing right (toward pulley). Block B: weight mg = 20 N pointing down, tension T pointing up.\n\n(b) Net force on system = mg(B) = 2(10) = 20 N. Total mass = 5 kg. a = F/m = 20/5 = 4 m/s²\n\n(c) For block A: T = ma = 3(4) = 12 N. Check with B: mg − T = ma → 20 − T = 2(4) → T = 12 N ✓' },
+    ],
+    tip:"Always start Newton's Law problems with a complete free-body diagram. Label every force with its type (weight, normal, tension, friction). AP graders award points for correct FBDs even if the algebra is wrong." },
+
+  {
+    id:'ph3', week:'w1', day:'Day 3', date:'Apr 23',
+    title:'Work, Energy & Power', skills:['Unit 3'], duration:'55 min',
+    summary:'Work-energy theorem, kinetic and potential energy, conservation of mechanical energy, power, and the effect of non-conservative forces like friction.',
+    resources:[
+      { type:'KA VIDEO', text:'<a href="https://www.khanacademy.org/science/ap-college-physics-1/ap-work-and-energy" target="_blank">Work and energy (full unit)</a>', note:'Work-energy theorem, gravitational PE, conservation of energy — all key' },
+      { type:'KA VIDEO', text:'<a href="https://www.khanacademy.org/science/ap-college-physics-1/ap-work-and-energy/ap-power/v/introduction-to-power" target="_blank">Introduction to power</a>', note:'P = W/t = Fv — power is newly emphasized in the 2025 CED' },
+      { type:'TOOL', text:'<a href="https://phet.colorado.edu/en/simulations/energy-skate-park" target="_blank">PhET: Energy Skate Park</a>', note:'Watch KE and PE exchange in real time — builds conservation of energy intuition' },
+    ],
+    problems:[
+      { type:'mc', number:1,
+        q:'A 2 kg ball is dropped from 5 m. What is its kinetic energy just before hitting the ground? (g = 10 m/s²)',
+        choices:[{letter:'A',text:'10 J'},{letter:'B',text:'50 J'},{letter:'C',text:'100 J'},{letter:'D',text:'25 J'}],
+        correct:'C',
+        explanation:'Conservation of energy: KE gained = PE lost = mgh = 2 × 10 × 5 = 100 J. No friction means all PE converts to KE.' },
+      { type:'mc', number:2,
+        q:'A 500 W motor lifts a 100 kg object. How high can it raise it in 10 seconds? (g = 10 m/s²)',
+        choices:[{letter:'A',text:'0.5 m'},{letter:'B',text:'5 m'},{letter:'C',text:'50 m'},{letter:'D',text:'500 m'}],
+        correct:'B',
+        explanation:'W = Pt = 500 × 10 = 5000 J. Work against gravity: W = mgh → h = W/(mg) = 5000/1000 = 5 m.' },
+      { type:'frq', number:3,
+        q:'A 0.5 kg block slides down a 2 m frictionless ramp inclined at 30°, then continues on a rough horizontal surface (μk = 0.4).',
+        parts:[
+          'Find the speed of the block at the bottom of the ramp.',
+          'Find how far the block travels on the horizontal surface before stopping.',
+          'If friction were present on the ramp, how would your answer to (a) change? Explain without calculating.',
+        ],
+        answer:'(a) Height h = 2 sin 30° = 1 m. Energy conservation: ½mv² = mgh → v = √(2gh) = √(20) ≈ 4.47 m/s\n\n(b) KE at bottom = mgh = 0.5(10)(1) = 5 J. Work by friction on flat: W_f = μk·m·g·d = 0.4(0.5)(10)d = 2d. Set 5 = 2d → d = 2.5 m.\n\n(c) The speed at the bottom would be less. Friction would do negative work on the block during the descent, removing mechanical energy from the system, so less KE would remain at the bottom.' },
+    ],
+    tip:'Conservation of energy is the most powerful tool in AP Physics 1. When a problem involves height changes and asks for speed, energy conservation is almost always faster and simpler than using kinematics equations.' },
+
+  {
+    id:'ph4', week:'w2', day:'Day 1', date:'Apr 24',
+    title:'Linear Momentum & Impulse', skills:['Unit 4'], duration:'55 min',
+    summary:'Momentum, impulse-momentum theorem, conservation of momentum, and elastic vs. perfectly inelastic collisions.',
+    resources:[
+      { type:'KA VIDEO', text:'<a href="https://www.khanacademy.org/science/ap-college-physics-1/ap-linear-momentum" target="_blank">Linear momentum (full unit)</a>', note:'Impulse, conservation of momentum, types of collisions' },
+      { type:'TOOL', text:'<a href="https://phet.colorado.edu/en/simulations/collision-lab" target="_blank">PhET: Collision Lab</a>', note:'Explore elastic vs. inelastic collisions and verify momentum conservation with data' },
+    ],
+    problems:[
+      { type:'mc', number:1,
+        q:'A 3 kg object moving at 4 m/s collides with and sticks to a stationary 2 kg object. What is the final velocity?',
+        choices:[{letter:'A',text:'1.2 m/s'},{letter:'B',text:'2.4 m/s'},{letter:'C',text:'6 m/s'},{letter:'D',text:'12 m/s'}],
+        correct:'B',
+        explanation:'Perfectly inelastic: p conserved. p_i = 3(4) = 12 kg·m/s. (3+2)v = 12 → v = 2.4 m/s.' },
+      { type:'mc', number:2,
+        q:'A 0.5 kg ball hits a wall at 10 m/s and bounces back at 8 m/s. The collision lasts 0.02 s. Average force from the wall?',
+        choices:[{letter:'A',text:'100 N'},{letter:'B',text:'200 N'},{letter:'C',text:'450 N'},{letter:'D',text:'900 N'}],
+        correct:'C',
+        explanation:'Impulse = Δp = m(v_f − v_i) = 0.5(−8 − 10) = −9 N·s. F = Δp/Δt = −9/0.02 = −450 N. Magnitude: 450 N.' },
+      { type:'frq', number:3,
+        q:'Cart A (2 kg, moving at 3 m/s right) collides with Cart B (3 kg, at rest). After the collision, A moves at 0.6 m/s right.',
+        parts:[
+          'Find the velocity of Cart B after the collision.',
+          'Is this collision elastic? Justify using kinetic energy.',
+          'Sketch a momentum vs. time graph for the entire system through the collision.',
+        ],
+        answer:'(a) Conservation of momentum: p_i = 2(3) = 6 kg·m/s. p_f = 2(0.6) + 3v_B = 1.2 + 3v_B = 6 → v_B = 1.6 m/s right.\n\n(b) KE_i = ½(2)(9) = 9 J. KE_f = ½(2)(0.36) + ½(3)(2.56) = 0.36 + 3.84 = 4.2 J. KE is lost → NOT elastic. This is an inelastic collision.\n\n(c) The system total momentum remains constant at 6 kg·m/s throughout — the graph is a flat horizontal line at p = 6 kg·m/s. Momentum is conserved during the collision, so there is no change.' },
+    ],
+    tip:'In any collision: momentum is ALWAYS conserved for the system (if no external forces). Kinetic energy is only conserved in elastic collisions. If the problem says "they stick together," it is perfectly inelastic — maximum KE is lost.' },
+
+  {
+    id:'ph5', week:'w2', day:'Day 2', date:'Apr 27',
+    title:'Rotation & Torque', skills:['Unit 5'], duration:'60 min',
+    summary:'Angular kinematics, torque, rotational inertia (moment of inertia), Newton\'s 2nd law for rotation (τ = Iα), and conservation of angular momentum.',
+    resources:[
+      { type:'KA VIDEO', text:'<a href="https://www.khanacademy.org/science/ap-college-physics-1/ap-torque-and-angular-momentum" target="_blank">Torque and angular momentum (full unit)</a>', note:'Torque, rotational inertia, angular momentum conservation' },
+      { type:'KA VIDEO', text:'<a href="https://www.khanacademy.org/science/ap-college-physics-1/ap-torque-and-angular-momentum/ap-angular-kinematics/v/angular-motion-variables" target="_blank">Angular kinematics</a>', note:'ω, α, θ are the rotational analogs of v, a, x — use the same kinematic equations' },
+    ],
+    problems:[
+      { type:'mc', number:1,
+        q:'A wrench applies 30 N at 0.4 m from the pivot, perpendicular to the handle. What is the torque?',
+        choices:[{letter:'A',text:'12 N·m'},{letter:'B',text:'75 N·m'},{letter:'C',text:'30 N·m'},{letter:'D',text:'0.013 N·m'}],
+        correct:'A',
+        explanation:'τ = r × F × sin(θ) = 0.4 × 30 × sin(90°) = 12 N·m. Torque is maximized when the force is perpendicular to the lever arm.' },
+      { type:'mc', number:2,
+        q:'A figure skater pulls her arms in, reducing her rotational inertia by half. What happens to her angular speed?',
+        choices:[{letter:'A',text:'Halves'},{letter:'B',text:'Doubles'},{letter:'C',text:'Stays the same'},{letter:'D',text:'Quadruples'}],
+        correct:'B',
+        explanation:'Angular momentum L = Iω is conserved (no external torque). If I halves, ω must double to keep L constant: I₁ω₁ = I₂ω₂.' },
+      { type:'frq', number:3,
+        q:'A uniform rod (mass M, length L) is pivoted at one end, held horizontal, then released from rest.',
+        parts:[
+          'Describe the direction and magnitude of the net torque just after release.',
+          'Using τ = Iα and I = (1/3)ML² for a rod pivoted at one end, find α just after release.',
+          'As the rod swings down toward vertical, how does α change? Explain.',
+        ],
+        answer:'(a) Gravity acts at the center of mass (distance L/2 from pivot), creating a clockwise torque. τ = Mg(L/2).\n\n(b) Mg(L/2) = (1/3)ML² · α → α = 3g/(2L)\n\n(c) α decreases. As the rod rotates toward vertical, the perpendicular distance from the pivot to the weight vector (the moment arm) decreases — it goes from L/2 at horizontal to 0 at vertical. Less moment arm → less torque → less angular acceleration. At vertical: τ = 0 and α = 0 (the rod has maximum angular speed there).' },
+    ],
+    tip:'The rotational analogs are your friends: τ = Iα mirrors F = ma; L = Iω mirrors p = mv. Angular momentum is conserved when net external torque = 0, exactly as linear momentum is conserved when net external force = 0.' },
+
+  {
+    id:'ph6', week:'w2', day:'Day 3', date:'Apr 30',
+    title:'Simple Harmonic Motion', skills:['Unit 6'], duration:'50 min',
+    summary:'Period and frequency of oscillation, springs (Hooke\'s law, F = −kx), pendulums, and the relationship between SHM and energy conservation.',
+    resources:[
+      { type:'KA VIDEO', text:'<a href="https://www.khanacademy.org/science/ap-college-physics-1/ap-simple-harmonic-motion" target="_blank">Simple harmonic motion (full unit)</a>', note:'Springs, pendulums, period, energy in SHM' },
+      { type:'TOOL', text:'<a href="https://phet.colorado.edu/en/simulations/masses-and-springs" target="_blank">PhET: Masses and Springs</a>', note:'See how mass and spring constant affect period — build the T ∝ √m intuition' },
+    ],
+    problems:[
+      { type:'mc', number:1,
+        q:'A spring-mass system has period T. If the mass is quadrupled (spring constant unchanged), what is the new period?',
+        choices:[{letter:'A',text:'T/4'},{letter:'B',text:'T/2'},{letter:'C',text:'2T'},{letter:'D',text:'4T'}],
+        correct:'C',
+        explanation:'T = 2π√(m/k). Quadrupling m: T_new = 2π√(4m/k) = 2 × 2π√(m/k) = 2T. Period scales as the square root of mass.' },
+      { type:'mc', number:2,
+        q:'A pendulum on Earth has period 2 s. On Planet X where g = g_Earth/4, what is the period?',
+        choices:[{letter:'A',text:'1 s'},{letter:'B',text:'2 s'},{letter:'C',text:'4 s'},{letter:'D',text:'8 s'}],
+        correct:'C',
+        explanation:'T = 2π√(L/g). If g is divided by 4, √(1/g) doubles, so T doubles from 2 s to 4 s.' },
+      { type:'frq', number:3,
+        q:'A 0.2 kg mass on a spring (k = 80 N/m) is pulled 0.1 m from equilibrium and released.',
+        parts:[
+          'Find the period of oscillation.',
+          'Find the maximum speed of the mass.',
+          'At what position is the speed exactly half the maximum? Use energy conservation — show your work.',
+        ],
+        answer:'(a) T = 2π√(m/k) = 2π√(0.2/80) = 2π√(0.0025) = 2π(0.05) ≈ 0.314 s\n\n(b) Maximum speed occurs at equilibrium where all PE is KE: ½kA² = ½mv²_max → v_max = A√(k/m) = 0.1√(400) = 0.1(20) = 2 m/s\n\n(c) When v = 1 m/s (half of 2 m/s): ½kA² = ½mv² + ½kx² → ½(80)(0.01) = ½(0.2)(1) + ½(80)x² → 0.4 = 0.1 + 40x² → x² = 0.0075 → x ≈ 0.0866 m ≈ 8.7 cm from equilibrium.' },
+    ],
+    tip:'Key SHM fact: period depends on what is oscillating (spring: m and k; pendulum: L and g) — NOT on amplitude. Doubling the amplitude does not change the period. This is one of the most common traps on the MC section.' },
+
+  {
+    id:'ph7', week:'w3', day:'Day 1', date:'May 1',
+    title:'Fluids — NEW for 2025', skills:['Unit 8'], duration:'55 min',
+    summary:'Brand new to AP Physics 1 in 2025 (moved from AP Physics 2): density, pressure, buoyancy (Archimedes\' principle), Pascal\'s law, the continuity equation, and Bernoulli\'s equation.',
+    resources:[
+      { type:'KA VIDEO', text:'<a href="https://www.khanacademy.org/science/ap-college-physics-1/ap-fluids" target="_blank">Fluids — full unit (NEW for 2025)</a>', note:'Density, pressure, buoyancy, fluid dynamics — all new to AP Physics 1' },
+      { type:'KA VIDEO', text:'<a href="https://www.khanacademy.org/science/ap-college-physics-1/ap-fluids/ap-buoyant-force-archimedes-principle/v/buoyant-force-example-problems" target="_blank">Buoyancy and Archimedes\' Principle examples</a>', note:'Key formula: F_buoyant = ρ_fluid × V_submerged × g' },
+      { type:'TOOL', text:'<a href="https://phet.colorado.edu/en/simulations/buoyancy" target="_blank">PhET: Buoyancy Simulation</a>', note:'Visualize floating, sinking, and Archimedes\' principle with adjustable density' },
+      { type:'PRIORITY', text:'Fluids is 10–15% of the 2025 exam', note:'Previously only in AP Physics 2 — many students are underprepared. Spend extra time here.' },
+    ],
+    problems:[
+      { type:'mc', number:1,
+        q:'A wood block (density 600 kg/m³) floats in water (density 1000 kg/m³). What fraction of the block is submerged?',
+        choices:[{letter:'A',text:'40%'},{letter:'B',text:'60%'},{letter:'C',text:'100%'},{letter:'D',text:'6%'}],
+        correct:'B',
+        explanation:'For a floating object: fraction submerged = ρ_object / ρ_fluid = 600/1000 = 0.60 = 60%. The object floats when buoyant force equals weight.' },
+      { type:'mc', number:2,
+        q:'Water flows through a pipe that narrows from radius 4 cm to radius 2 cm. If speed in the wide section is 1 m/s, what is the speed in the narrow section?',
+        choices:[{letter:'A',text:'0.25 m/s'},{letter:'B',text:'2 m/s'},{letter:'C',text:'4 m/s'},{letter:'D',text:'16 m/s'}],
+        correct:'C',
+        explanation:'Continuity equation: A₁v₁ = A₂v₂. Cross-sectional area A ∝ r². Ratio A₁/A₂ = (4/2)² = 4. So v₂ = 4v₁ = 4(1) = 4 m/s. Narrower pipe → faster flow.' },
+      { type:'frq', number:3,
+        q:'A submarine has mass 2 × 10⁶ kg and volume 2000 m³. It is fully submerged in seawater (ρ = 1025 kg/m³, g = 10 m/s²).',
+        parts:[
+          'Calculate the buoyant force on the submarine.',
+          'Is the submarine in equilibrium? If not, in which direction does the net force act?',
+          'To remain at constant depth, the submarine takes on or releases ballast water. How much water mass must it take on or release to achieve equilibrium?',
+        ],
+        answer:'(a) F_b = ρ_fluid × V × g = 1025 × 2000 × 10 = 2.05 × 10⁷ N\n\n(b) Weight W = mg = 2 × 10⁶ × 10 = 2.0 × 10⁷ N. F_b (2.05 × 10⁷ N) > W (2.0 × 10⁷ N) → net force is upward. Not in equilibrium — the submarine rises.\n\n(c) To achieve equilibrium: F_b must equal total weight. Additional weight needed: ΔW = 2.05 × 10⁷ − 2.0 × 10⁷ = 5 × 10⁵ N. Mass of ballast water = ΔW/g = 5 × 10⁵ / 10 = 5 × 10⁴ kg. The submarine must take on 50,000 kg of ballast water.' },
+    ],
+    tip:'Fluids is brand new to AP Physics 1 in 2025 and will definitely appear on the exam. The two most-tested concepts are Archimedes\' principle (F_b = ρ_fluid × V_sub × g) and the continuity equation (A₁v₁ = A₂v₂). Know both cold.' },
+
+  {
+    id:'ph8', week:'w3', day:'Day 2', date:'May 4',
+    title:'Waves & Mixed Practice', skills:['Unit 7'], duration:'60 min',
+    summary:'Mechanical wave properties (amplitude, wavelength, frequency, speed), standing waves on strings, resonance, and the Doppler effect.',
+    resources:[
+      { type:'KA VIDEO', text:'<a href="https://www.khanacademy.org/science/ap-college-physics-1/ap-mechanical-waves-sound" target="_blank">Mechanical waves and sound (full unit)</a>', note:'Wave properties, standing waves, Doppler effect — all tested' },
+      { type:'CB RESOURCE', text:'<a href="https://apcentral.collegeboard.org/courses/ap-physics-1/exam/past-exam-questions" target="_blank">Past AP Physics 1 FRQs</a>', note:'Do one full timed FRQ set (100 min for 4–5 questions) under real exam conditions' },
+    ],
+    problems:[
+      { type:'mc', number:1,
+        q:'A wave on a string has frequency 5 Hz and wavelength 0.4 m. What is the wave speed?',
+        choices:[{letter:'A',text:'0.08 m/s'},{letter:'B',text:'2 m/s'},{letter:'C',text:'5 m/s'},{letter:'D',text:'12.5 m/s'}],
+        correct:'B',
+        explanation:'v = fλ = 5 × 0.4 = 2 m/s. This fundamental wave equation always holds.' },
+      { type:'mc', number:2,
+        q:'A standing wave on a 1.5 m string (fixed at both ends) shows 3 antinodes. What is the wavelength?',
+        choices:[{letter:'A',text:'0.5 m'},{letter:'B',text:'1.0 m'},{letter:'C',text:'1.5 m'},{letter:'D',text:'3.0 m'}],
+        correct:'B',
+        explanation:'3 antinodes = 3rd harmonic = 3 half-wavelengths fit in length L. So 3(λ/2) = 1.5 → λ = 1.0 m.' },
+      { type:'frq', number:3,
+        q:'A guitar string of length 0.65 m is fixed at both ends. Wave speed on the string is 400 m/s.',
+        parts:[
+          'What is the fundamental frequency (1st harmonic)?',
+          'What are the frequencies of the 2nd and 3rd harmonics?',
+          'If the tension in the string is doubled, how does the fundamental frequency change? Justify your answer.',
+        ],
+        answer:'(a) For the fundamental: L = λ/2 → λ = 1.3 m. f₁ = v/λ = 400/1.3 ≈ 308 Hz.\n\n(b) f₂ = 2f₁ ≈ 615 Hz; f₃ = 3f₁ ≈ 923 Hz.\n\n(c) Wave speed v = √(F_T/μ). Doubling tension: v_new = √2 × 400 ≈ 566 m/s. f₁_new = 566/1.3 ≈ 435 Hz ≈ √2 × 308 Hz. The fundamental frequency increases by a factor of √2 ≈ 1.41.' },
+    ],
+    tip:'Standing waves on strings fixed at both ends: n half-wavelengths fit in length L (n = harmonic number). The nth harmonic has frequency f_n = n × f₁. Know this pattern — it appears in both multiple choice and FRQ every year.' },
+
+  {
+    id:'ph9', week:'w3', day:'Day 3', date:'May 5',
+    title:'Final Review', skills:['All units'], duration:'45 min',
+    summary:'Light review only. Skim the formula sheet, revisit your weakest unit, rest up. Exam format: 40 MC (80 min) + 4–5 FRQ (100 min). Fully digital on Bluebook.',
+    resources:[
+      { type:'CB RESOURCE', text:'<a href="https://apcentral.collegeboard.org/courses/ap-physics-1/exam" target="_blank">AP Physics 1 Exam page — official formula sheet</a>', note:'Download and skim the formula sheet — it is provided on exam day' },
+      { type:'REVIEW', text:'<a href="https://www.khanacademy.org/science/ap-college-physics-1" target="_blank">KA AP Physics 1 — check unit mastery</a>', note:'Skim whichever unit feels shakiest' },
+      { type:'TOOL', text:'<a href="https://phet.colorado.edu" target="_blank">PhET Simulations</a>', note:'Quick visual review of any concept in 5 minutes' },
+    ],
+    problems:[
+      { type:'mc', number:1,
+        q:'Which of the following is conserved in ALL collisions?',
+        choices:[{letter:'A',text:'Kinetic energy'},{letter:'B',text:'Total mechanical energy'},{letter:'C',text:'Total momentum of the system'},{letter:'D',text:'Velocity of each individual object'}],
+        correct:'C',
+        explanation:'Momentum is always conserved in a closed system (no external net force). Kinetic energy is only conserved in elastic collisions. Total mechanical energy is not conserved when friction or deformation are present.' },
+      { type:'mc', number:2,
+        q:'A ball on a string moves in a horizontal circle at constant speed. The net force on the ball:',
+        choices:[{letter:'A',text:'Is zero because the speed is constant'},{letter:'B',text:'Points outward, away from the center'},{letter:'C',text:'Points inward, toward the center'},{letter:'D',text:'Is tangent to the circular path'}],
+        correct:'C',
+        explanation:'Uniform circular motion requires centripetal (center-seeking) force. Constant speed does NOT mean zero acceleration — the direction of velocity is continuously changing, so there IS acceleration and net force, directed toward the center.' },
+    ],
+    tip:'🎯 Exam day: Approved calculator (TI-84 OK), pencil. Format: 40 MC (80 min) + 4–5 FRQ (100 min). Always show ALL work in FRQs — partial credit requires shown reasoning, correct equations, and proper units.' },
+];
+
+
+// ─── INIT ─────────────────────────────────────────────────────────────────────
+buildSidebar('stats',   statsSessions,   statsWeeks);
+buildSidebar('physics', physicsSessions, physicsWeeks);
+renderSession('stats',   statsSessions[0].id,   statsSessions, statsWeeks);
+renderSession('physics', physicsSessions[0].id, physicsSessions, physicsWeeks);
+updateProgressBar('stats');
+</script>
+</body>
+</html>
+
